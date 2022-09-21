@@ -7,17 +7,14 @@ from .Base import BaseLayer
 from .FullyConnected import FullyConnected
 from copy import deepcopy
 
-
-# NOTE
-# Backprogpatation of a copy is the sum
-# In the first iteration we have hidden state gradient as zero?
-# Split x~ into x and h in backpropagation
-# Correct time stamps for backprogpagation
-# Update step is smilar to the conv
-
-
 class RNN(BaseLayer):
     def __init__(self, input_size, hidden_size, output_size):
+        """Recurrent neural network based on elman cell
+
+        :param input_size:
+        :param hidden_size:
+        :param output_size:
+        """
         super().__init__()
         self.trainable = True
 
@@ -50,6 +47,11 @@ class RNN(BaseLayer):
 
 
     def forward(self, input_tensor):
+        """RNN forward pass.
+
+        :param input_tensor: Output tensor from the lower layer
+        :return: The input tensor for the next layer
+        """
         self.hidden_layer_inputs = []
         self.output_layer_inputs = []
         self.input_tensor = input_tensor
@@ -100,12 +102,11 @@ class RNN(BaseLayer):
         return self.forward_output
 
     def backward(self, error_tensor):
-        #
-        # For Grad. w.r.t. input weights:
-        #   After each FC bw step. Update weights inside here (optimizer if existent)
-        #   -> Since for FC grad_W = self.recent_input.T @ error_tensor :
-        #       We need the correct input for that FC layer. What if two RNN layers in a row? Getter and Setter?
-        #   Add them up and make one update step in the end
+        """ RNN backward pass
+
+        :param error_tensor: Gradient tensor from the upper layer
+        :return: Gradient w.r.t. input tensor that serves as input to the lower layer during backpropagation
+        """
         self.gradient_output = np.zeros_like(self.output_layer.weights)
         self._gradient_weights = np.zeros((self.conc_size + 1, self.hidden_size))
 
@@ -154,6 +155,12 @@ class RNN(BaseLayer):
         return self.input_gradient
 
     def initialize(self, weights_initializer, bias_initializer):
+        """Initializes weights and bias for RNN
+
+        :param weights_initializer: A weight initializer from Initializers.py
+        :param bias_initializer: A bias initializer from Initializers.py
+        :return: Weights and biases
+        """
         self.hidden_layer.initialize(weights_initializer, bias_initializer)
         self.output_layer.initialize(weights_initializer, bias_initializer)
 
