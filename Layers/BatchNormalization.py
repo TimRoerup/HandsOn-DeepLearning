@@ -1,10 +1,9 @@
 import numpy as np
 from Layers import Base
-from Layers.Helpers import compute_bn_gradients
 
 class BatchNormalization(Base.BaseLayer):
     def __init__(self, channels):
-        """
+        """ Batch normalization layer. Works for fully connected layer and convolution layer.
         :param channels: Channels of input tensor in vector and image case
         """
 
@@ -26,10 +25,49 @@ class BatchNormalization(Base.BaseLayer):
         self._gradient_input = None
         self.input_tensor = None
 
+    def compute_bn_gradients(self, error_tensor, input_tensor, weights, mean, var, eps=np.finfo(float).eps):
+        """ Computation of the gradient w.r.t the input for the batch_normalization layer.
+
+        :param error_tensor: Gradient tensor from the upper layer
+        :param input_tensor: Output tensor from the lower layer
+        :param weights: Weights for the batch normalization layer
+        :param mean: Mean of the batch (calculated during training via sliding window approach)
+        :param var: Variance of the batch (calculated during training via sliding window approach)
+        :param eps: Vanishing small float to avoid dividing by zero.
+        :return: Gradient w.r.t the input tensor
+        """
+
+        if eps > 1e-10:
+            raise ArithmeticError("Eps must be lower than 1e-10. Your eps values %s" % (str(eps)))
+
+        norm_mean = input_tensor - mean
+        var_eps = var + eps
+
+        gamma_err = error_tensor * weights
+        inv_batch = 1. / error_tensor.shape[0]
+
+        grad_var = np.sum(norm_mean * gamma_err * -0.5 * (var_eps ** (-3 / 2)), keepdims=True, axis=0)
+
+        sqrt_var = np.sqrt(var_eps)
+        first = gamma_err * 1. / sqrt_var
+
+        grad_mu_two = (grad_var * np.sum(-2. * norm_mean, keepdims=True, axis=0)) * inv_batch
+        grad_mu_one = np.sum(gamma_err * -1. / sqrt_var, keepdims=True, axis=0)
+
+        second = grad_var * (2. * norm_mean) * inv_batch
+        grad_mu = grad_mu_two + grad_mu_one
+
+        return first + second + inv_batch * grad_mu
+
     def forward(self, input_tensor):
+        """ Batch normalization forward pass.
+
+        :param input_tensor: Output tensor from the lower layer
+        :return: The input tensor for the next layer.
+        """
+
         # Check whether Convolution Layer
         if input_tensor.ndim == 4:
-            # We have a CV layer -> Reshape input
             self.fc = False
             input_tensor = self.reformat(input_tensor)
         # FC layer case
@@ -61,13 +99,18 @@ class BatchNormalization(Base.BaseLayer):
             self.X_tilde = (input_tensor - self.mean) / ((self.sigma + e) ** 0.5)
             self.Y_head = self.weights * self.X_tilde + self.bias
 
-        # Reshape the reversed procedure for CV
+        # Reshape with the reversed procedure for Convolution layer
         self.Y_head = self.Y_head if self.fc else self.reformat(self.Y_head)
 
         return self.Y_head
 
 
     def backward(self, error_tensor):
+        """Batch normalization backward pass
+
+        :param error_tensor: Gradient tensor from the upper layer.
+        :return: Gradient w.r.t. input tensor that serves as input to the lower layer during backpropagation
+        """
         self.gradient_weights = np.zeros_like(self.weights)
         self.gradient_bias = np.zeros_like(self.bias)
 
@@ -84,7 +127,7 @@ class BatchNormalization(Base.BaseLayer):
 
         self.gradient_bias = np.sum(error_tensor, axis=0)
 
-        self._gradient_input = compute_bn_gradients(error_tensor, self.input_tensor, self.weights, self.mean, self.sigma)
+        self._gradient_input = self.compute_bn_gradients(error_tensor, self.input_tensor, self.weights, self.mean, self.sigma)
         self._gradient_input = self._gradient_input if self.fc else self.reformat(self._gradient_input)
 
         # Update weights & bias
@@ -95,11 +138,23 @@ class BatchNormalization(Base.BaseLayer):
         return self._gradient_input
 
     def initialize(self, weights_initializer, bias_initializer):
+        """Initializes weights and bias for the batch normalization layer
+
+        :param weights_initializer: A weight initializer from Initializers.py
+        :param bias_initializer: A bias initializer from Initializers.py
+        :return: Weights and biases
+        """
         # Gets initializers but ignores them intentionally
         self.weights = np.ones((self.channels))
         self.bias = np.zeros((self.channels))
 
     def reformat(self, tensor):
+        """Reshapes input tensor to be able to deal with inputs from a convolutional layer and fully connected layer as
+        well.
+
+        :param tensor: Tensor to be reshaped
+        :return: Reshaped tensor
+        """
         if tensor.ndim == 4:
             # We have a CV layer -> Reshape input
             self.fc = False
