@@ -5,12 +5,21 @@ from .Base import BaseLayer
 
 class Pooling(BaseLayer):
     def __init__(self, stride_shape, pooling_shape):
+        """Pooling layer for convolutional neural networks.
+
+        :param stride_shape: Stride value for pooling
+        :param pooling_shape: Kernel shape for pooling
+        """
         super().__init__()
         self.stride_shape = stride_shape
         self.pooling_shape = pooling_shape
-        
-    # Does a single pooling operation for a given input matrix    
+
     def __singlePool(self, input_matrix):
+        """Does a single pooling operation for a given input matrix
+
+        :param input_matrix: The input matrix to be pooled
+        :return: Pooled matrix
+        """
         assert tuple(input_matrix.shape) == tuple(self.pooling_shape), f"Input matrix {input_matrix.shape} is not the same shape as pooling shape {self.pooling_shape}"
         
         index = np.unravel_index(np.argmax(np.ravel(input_matrix)), self.pooling_shape)
@@ -18,8 +27,13 @@ class Pooling(BaseLayer):
         
         return index, highest
     
-    # Does complete pooling over a 2D array
+
     def __2DPool(self, input_matrix):
+        """ Does complete pooling over a 2D array
+
+        :param input_matrix: 2D array
+        :return: Pooled array
+        """
         assert input_matrix.ndim == 2, "Input array is not 2D"
         
         height, width = input_matrix.shape
@@ -50,8 +64,13 @@ class Pooling(BaseLayer):
         return indexes, pooled_matrix
     
     def forward(self, input_tensor):
+        """Forward pass of pooling layer
+
+        :param input_tensor: Output tensor from the lower layer
+        :return: The input tensor for the next layer.
+        """
+
         # input_tensor shape: batch, channel, x, y
-        
         # For Example: (4,4) matrix with (2,2) pool and (1,1) stride -> (4-2)//1 + 1 = 3
         output_shape = (input_tensor.shape[0],
                         input_tensor.shape[1],
@@ -60,7 +79,7 @@ class Pooling(BaseLayer):
         
         # This is the final matrix
         pooled_matrix = np.zeros(output_shape)
-        # Indices are 1 where there is a maximum
+        # Indices are 1 where there is a maximum. Needed for backpropagation.
         self.max_indexes = np.zeros((*output_shape, 2))
         self.backward_shape = input_tensor.shape
         
@@ -71,6 +90,11 @@ class Pooling(BaseLayer):
         return pooled_matrix
     
     def backward(self, error_tensor):
+        """ Backward pass of pooling layer
+
+        :param error_tensor: Gradient tensor from the upper layer.
+        :return: Gradient w.r.t. input tensor that serves as input to the lower layer during backpropagation
+        """
         output_shape = self.backward_shape
         
         output_matrix = np.zeros(output_shape)
@@ -84,4 +108,3 @@ class Pooling(BaseLayer):
                         loc_j = j * self.stride_shape[1] + int(max_index[1])
                         output_matrix[b][c][loc_i][loc_j] += error_tensor[b][c][i][j]
         return output_matrix
-
