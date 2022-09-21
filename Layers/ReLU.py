@@ -4,9 +4,8 @@ from .Base import BaseLayer
 
 
 class ReLU(BaseLayer):
+    """ Rectified linear unit activation function/layer  """
     def __init__(self):
-        """ Rectified linear unit activation function/layer
-        """
         super().__init__()
         self.prev_input = None
 

@@ -3,10 +3,16 @@ from Layers import Base
 
 
 class SoftMax(Base.BaseLayer):
+    """ Softmax activation function/layer """
     def __init__(self):
         super().__init__()
 
     def forward(self, input_tensor):
+        """ Forward pass of Softmax layer. Basically applies Softmax function.
+
+        :param input_tensor: Output tensor from the lower layer
+        :return: The input tensor for the next layer
+        """
         
         # Max shift: x_i' <- x_i - max(x)
         # Get maxima of every batch entry (row of input_tensor)
@@ -26,6 +32,11 @@ class SoftMax(Base.BaseLayer):
         return self.y
 
     def backward(self, error_tensor):
+        """ Backward pass of Softmax layer
+
+        :param error_tensor: Gradient tensor from the upper layer
+        :return: Gradient w.r.t. input tensor that serves as input to the lower layer during backpropagation
+        """
         sums = np.sum(error_tensor * self.y, axis=1).reshape(-1, 1)
         sums = np.tile(sums, (1, error_tensor.shape[1]))
 

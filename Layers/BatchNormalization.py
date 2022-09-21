@@ -2,11 +2,11 @@ import numpy as np
 from Layers import Base
 
 class BatchNormalization(Base.BaseLayer):
-    def __init__(self, channels):
-        """ Batch normalization layer. Works for fully connected layer and convolution layer.
-        :param channels: Channels of input tensor in vector and image case
-        """
+    """ Batch normalization layer. Works for fully connected layer and convolution layer.
 
+    :param channels: Channels of input tensor in vector and image case
+    """
+    def __init__(self, channels):
         super().__init__()
         self.channels = channels
         self.trainable = True
