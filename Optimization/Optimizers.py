@@ -1,6 +1,7 @@
 import numpy as np
 
 class Optimizer:
+    """ Base class every optimizer inherits from"""
     def __init__(self):
         self.regularizer = None
         self.learning_rate = None
@@ -10,6 +11,7 @@ class Optimizer:
 
 
 class Sgd(Optimizer):
+    """Stochastic gradient descent"""
     def __init__(self, learning_rate: float):
         super().__init__()
         self.learning_rate = learning_rate
@@ -21,10 +23,10 @@ class Sgd(Optimizer):
             return weight_tensor  - self.learning_rate * gradient_tensor
 
 class SgdWithMomentum(Optimizer):
+    """Stochastic gradient descent with momentum"""
     def __init__(self, learning_rate, momentum_rate):
         super().__init__()
-        # Previous moment is initialized as zero (I think this makes sense?)
-        # Caching of layer specific weights are done in Network side, I believe? (Where the optimizer is initiated)
+        # Previous moment is initialized as zero
         self.learning_rate = learning_rate
         self.momentum_rate = momentum_rate
         self.prev_moment = 0
@@ -39,6 +41,7 @@ class SgdWithMomentum(Optimizer):
             return weight_tensor + moment
 
 class Adam(Optimizer):
+    """Adaptive moment estimation"""
     def __init__(self, learning_rate, mu, rho):
         super().__init__()
 
